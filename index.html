@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Capture Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .camera-section {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        #video {
+            width: 100%;
+            display: block;
+            border-radius: 10px;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        #startBtn {
+            background: #667eea;
+            color: white;
+        }
+
+        #startBtn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        #captureBtn {
+            background: #48bb78;
+            color: white;
+        }
+
+        #captureBtn:hover:not(:disabled) {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+        }
+
+        #captureBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #stopBtn {
+            background: #f56565;
+            color: white;
+        }
+
+        #stopBtn:hover:not(:disabled) {
+            background: #e53e3e;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 101, 101, 0.4);
+        }
+
+        #stopBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .captured-photos {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .photo-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .photo-item img {
+            width: 100%;
+            display: block;
+        }
+
+        .photo-item button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background: rgba(245, 101, 101, 0.9);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .photo-item button:hover {
+            background: rgba(229, 62, 62, 1);
+        }
+
+        .no-photos {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            font-size: 18px;
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .status.active {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status.inactive {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📷 Camera Capture Test</h1>
+        
+        <div id="status" class="status inactive">Camera is off</div>
+        
+        <div class="camera-section">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn">Start Camera</button>
+            <button id="captureBtn" disabled>Capture Photo</button>
+            <button id="stopBtn" disabled>Stop Camera</button>
+        </div>
+
+        <h2 style="margin: 30px 0 15px 0; color: #333;">Captured Photos</h2>
+        <div id="capturedPhotos" class="captured-photos">
+            <div class="no-photos">No photos captured yet</div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const startBtn = document.getElementById('startBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const capturedPhotos = document.getElementById('capturedPhotos');
+        const status = document.getElementById('status');
+        
+        let stream = null;
+        let photos = [];
+
+        // Start camera
+        startBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' },
+                    audio: false 
+                });
+                
+                video.srcObject = stream;
+                
+                startBtn.disabled = true;
+                captureBtn.disabled = false;
+                stopBtn.disabled = false;
+                
+                status.textContent = 'Camera is active';
+                status.className = 'status active';
+            } catch (err) {
+                alert('Error accessing camera: ' + err.message);
+                console.error('Camera error:', err);
+            }
+        });
+
+        // Capture photo
+        captureBtn.addEventListener('click', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            const imageData = canvas.toDataURL('image/png');
+            photos.push({
+                id: Date.now(),
+                data: imageData
+            });
+            
+            displayPhotos();
+        });
+
+        // Stop camera
+        stopBtn.addEventListener('click', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                stream = null;
+            }
+            
+            startBtn.disabled = false;
+            captureBtn.disabled = true;
+            stopBtn.disabled = true;
+            
+            status.textContent = 'Camera is off';
+            status.className = 'status inactive';
+        });
+
+        // Display captured photos
+        function displayPhotos() {
+            if (photos.length === 0) {
+                capturedPhotos.innerHTML = '<div class="no-photos">No photos captured yet</div>';
+                return;
+            }
+            
+            capturedPhotos.innerHTML = photos.map(photo => `
+                <div class="photo-item">
+                    <img src="${photo.data}" alt="Captured photo">
+                    <button onclick="deletePhoto(${photo.id})">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        // Delete photo
+        function deletePhoto(id) {
+            photos = photos.filter(photo => photo.id !== id);
+            displayPhotos();
+        }
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
