@@ -216,7 +216,7 @@
         startBtn.addEventListener('click', async () => {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'user' },
+                    video: { facingMode: { exact: 'environment' } },
                     audio: false 
                 });
                 
